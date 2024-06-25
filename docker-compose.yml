@@ -1,0 +1,60 @@
+services:
+    app:
+        build:
+            context: node
+        image: nodeapp
+        container_name: app
+        networks:
+            - node-network
+        tty: true
+        # O container do app irá iniciar apenas quando o container do db retornar que está healthy.
+        # Isso é uma forma de realizar a dependência entre containers sem precisar de uma ferramenta externa (por exemplo, dockerize).
+        depends_on:
+            db:
+                condition: service_healthy
+
+    db:
+        image: mysql:5.7
+        container_name: db
+        command: --innodb-use-native-aio=0
+        environment:
+            - MYSQL_ROOT_PASSWORD=root
+            - MYSQL_DATABASE=nodedb
+        volumes:
+            - ./db:/var/lib/mysql
+        networks:
+            - node-network
+        restart: always
+        tty: true
+        # O comando executado para determinar que o container do db está healthy.
+        # Quando o retorno desse comando for sucesso, significa que o mysql foi completamente iniciado e está aceitando conexões.
+        # Estando healthy, os containeres que possuem dependência com o db (nesse caso, o app) estarão liberados para incialização.
+        # É possível também especificar o timeout para o retonro do estado de healthy e a quantidade máxima de tentativas.
+        healthcheck:
+            test:
+                [
+                    'CMD',
+                    'mysqladmin',
+                    'ping',
+                    '-h',
+                    'localhost',
+                    '-u',
+                    'root',
+                    '-p$$MY_SQL_ROOT_PASSWORD',
+                ]
+            timeout: 20s
+            retries: 10
+
+    server:
+        image: nginx:1.27.0
+        container_name: server
+        volumes:
+            - ./nginx:/etc/nginx
+        networks:
+            - node-network
+        ports:
+            - 8080:80
+
+networks:
+    node-network:
+        driver: bridge
