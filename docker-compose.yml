@@ -4,9 +4,16 @@ services:
             context: node
         image: nodeapp
         container_name: app
+        volumes:
+            - ./node:/usr/src/app
         networks:
             - node-network
         tty: true
+        command: bash -c "npm i && node index.js"
+        healthcheck:
+            test: ['CMD', 'curl', 'localhost:3000/healthcheck']
+            timeout: 40s
+            retries: 20
         # O container do app irá iniciar apenas quando o container do db retornar que está healthy.
         # Isso é uma forma de realizar a dependência entre containers sem precisar de uma ferramenta externa (por exemplo, dockerize).
         depends_on:
@@ -55,7 +62,8 @@ services:
         ports:
             - 8080:80
         depends_on:
-            - app
+            app:
+                condition: service_healthy
 
 networks:
     node-network:

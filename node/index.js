@@ -42,4 +42,6 @@ app.get('/', (req, res) => {
     connection.end();
 });
 
+app.get('/healthcheck', (req, res) => res.send('Ok'));
+
 app.listen(PORT, () => console.log(`Pronto para conexão na porta ${PORT}`));
